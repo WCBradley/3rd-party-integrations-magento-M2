@@ -7,17 +7,18 @@
 
 namespace Emarsys\Emarsys\Model;
 
-use Magento\Framework\Mail\MessageInterface;
+use Magento\Framework\Mail\MailMessageInterface;
 use Magento\Framework\Mail\TransportInterface;
+use Magento\Email\Model\TransportFactory as MagentoTransportFactory;
 
 /**
  * Class Transport
  * @package Emarsys\Emarsys\Model
  */
-class Transport extends \Zend_Mail_Transport_Sendmail implements TransportInterface
+class Transport implements TransportInterface
 {
     /**
-     * @var MessageInterface|\Zend_Mail
+     * @var MailMessageInterface
      */
     protected $_message;
 
@@ -27,34 +28,43 @@ class Transport extends \Zend_Mail_Transport_Sendmail implements TransportInterf
     protected $sendEmail;
 
     /**
+     * @var MagentoTransportFactory
+     */
+    protected $magentoTransportFactory;
+
+    /**
      * Transport constructor.
-     * @param MessageInterface $message
+     * @param MailMessageInterface $message
      * @param SendEmail $sendEmail
      * @param null $parameters
      */
     public function __construct(
-        MessageInterface $message,
+        MailMessageInterface $message,
         SendEmail $sendEmail,
+        MagentoTransportFactory $magentoTransportFactory,
         $parameters = null
     ) {
-        if (!$message instanceof \Zend_Mail) {
-            throw new \InvalidArgumentException('The message should be an instance of \Zend_Mail');
+        if (!$message instanceof MailMessageInterface) {
+            throw new \InvalidArgumentException('The message should be an instance of Magento\Framework\Mail\MailMessageInterface');
         }
 
-        parent::__construct($parameters);
         $this->_message = $message;
         $this->sendEmail = $sendEmail;
+        $this->magentoTransportFactory = $magentoTransportFactory;
     }
 
-    /**
-     * @throws \Zend_Mail_Transport_Exception
-     */
     public function sendMessage()
     {
         $mailSendingStatus = $this->sendEmail->sendMail($this->_message);
 
+        //if we failed to relay through Emarsys for any reason, fallback to local relay via Sendmail
         if ($mailSendingStatus) {
-            parent::send($this->_message);
+            //instantiate the stock Magento Framework Sendmail system to relay this
+            /** @see \Magento\Framework\Mail\Template\TransportBuilder::getTransport */
+            $magentoTransport = $this->magentoTransportFactory->create(
+                ['message' => clone $this->_message]
+            );
+            $magentoTransport->sendMessage();
         }
     }
 

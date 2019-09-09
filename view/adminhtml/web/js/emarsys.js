@@ -98,12 +98,11 @@ function changeValue(url, attribute, coulmnAttr, value, entityTypeId)
 
 require([
     'jquery',
-    'tinymce',
     'Magento_Ui/js/modal/confirm',
     'Magento_Ui/js/modal/alert',
     'loadingPopup',
     'mage/backend/floating-header'
-], function (jQuery, tinyMCE, confirm) {
+], function (jQuery, confirm) {
     'use strict';
 
     /**
